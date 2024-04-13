@@ -1,11 +1,11 @@
 === Advanced Google reCAPTCHA ===
 
 Contributors: WebFactory
-Tags: captcha, recaptcha, google recaptcha, comment recaptcha, login recaptcha, brute force, spam, bots, protect, registration, google captcha, woocommerce recaptcha, comments captcha
+Tags: captcha, recaptcha, google recaptcha, comment recaptcha, login recaptcha
 Requires at least: 4.9
 Requires PHP: 5.6
-Tested up to: 6.4
-Stable tag: 1.20
+Tested up to: 6.5
+Stable tag: 1.21
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -16,7 +16,7 @@ Captcha protection against spam comments & brute force login attacks using Googl
 
 Using Advanced Google reCAPTCHA (most popular captcha on the market), you'll be safe from spam comments and protect user accounts, WooCommerce, Easy Digital Downloads, BuddyPress and other forms from brute-force login attacks.
 
-Works for:
+reCaptcha works for:
 
 * Login Form
 * Registration Form
@@ -28,7 +28,7 @@ Works for:
 * Easy Digital Downloads (EDD) Registration Form
 
 
-Plugin uses these 3rd party libs:
+Captcha uses these 3rd party libs:
 
 * Chart.js, 2017 Nick Downie, MIT
 * DataTables, 2008-2017 SpryMedia Ltd, MIT
@@ -75,6 +75,8 @@ You can report security bugs through the Patchstack Vulnerability Disclosure Pro
 9. Plugin settings
 
 == Changelog ==
+= 1.21 - 13/04/2024
+* reCAPTCHA validation request error handling fix
 
 = 1.20 - 13/03/2024
 * double slash on images bug fix
