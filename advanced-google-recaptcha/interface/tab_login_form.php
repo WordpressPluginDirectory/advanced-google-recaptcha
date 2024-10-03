@@ -112,7 +112,13 @@ class WPCaptcha_Tab_Login_Form extends WPCaptcha
         echo '<div class="open-upsell open-upsell-block" data-feature="whitelist">';
         echo '<textarea class="regular-text" id="whitelist" rows="6"></textarea>';
         echo '</div>';
-        echo '<span>List of IP addresses that will never be blocked. Enter one IP per line.<br>Your current IP is: <code>' . esc_html($_SERVER['REMOTE_ADDR']) . '</code></span>';
+        if(isset($_SERVER['REMOTE_ADDR'])){
+            $remote_address = sanitize_url(wp_unslash($_SERVER['REMOTE_ADDR']));
+        } else {
+            $remote_address = 'unknown';
+        }
+        
+        echo '<span>List of IP addresses that will never be blocked. Enter one IP per line.<br>Your current IP is: <code>' . esc_html($remote_address) . '</code></span>';
         echo '</td></tr>';
 
         echo '<tr valign="top">
