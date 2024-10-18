@@ -463,7 +463,8 @@ class WPCaptcha_Functions extends WPCaptcha
 
     static function captcha_fields_print()
     {
-        WPCaptcha_Utility::wp_kses_wf(self::captcha_fields(false));
+        //phpcs:ignore this just prints the recaptcha HTML inline and all variables are already escaped
+        echo self::captcha_fields(false); //phpcs:ignore
     }
 
     static function captcha_fields($output = false)
@@ -528,7 +529,8 @@ class WPCaptcha_Functions extends WPCaptcha
 
     static function login_scripts_print()
     {
-        WPCaptcha_Utility::wp_kses_wf(self::login_scripts(false));
+        //phpcs:ignore this just prints the recaptcha scripts inline as they can be used in various forms where enqueing normally is not always working
+        echo self::login_scripts(false); //phpcs:ignore
     }
 
     static function login_scripts($output = false)

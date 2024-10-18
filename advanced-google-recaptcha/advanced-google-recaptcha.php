@@ -3,7 +3,7 @@
   Plugin Name: Advanced Google reCAPTCHA
   Plugin URI: https://getwpcaptcha.com/
   Description: Advanced Google reCAPTCHA will safeguard your WordPress site from spam comments and brute force attacks. With this plugin, you can easily add Google reCAPTCHA to WordPress comment form, login form and other forms.
-  Version: 1.23
+  Version: 1.24
   Author: WebFactory Ltd
   Author URI: https://www.webfactoryltd.com/
   License: GNU General Public License v3.0
@@ -109,7 +109,7 @@ class WPCaptcha
             
             // AJAX endpoints
             add_action('wp_ajax_wpcaptcha_run_tool', array('WPCaptcha_AJAX', 'ajax_run_tool'));
-        } else {
+        }  else {
             // Handle login captcha
             if($options['captcha_show_login']){
                 add_filter( 'login_form', array('WPCaptcha_Functions', 'captcha_fields_print'));
@@ -126,13 +126,13 @@ class WPCaptcha
             // Handle registration captcha
             if($options['captcha_show_wp_registration']){
                 add_filter( 'registration_errors', array('WPCaptcha_Functions', 'handle_captcha_wp_registration'), 10, 3 );
-                add_filter( 'register_form', array('WPCaptcha_Functions', 'captcha_fields'));
+                add_action( 'register_form', array('WPCaptcha_Functions', 'captcha_fields_print'));
             }
 
             // Handle lost password captcha
             if($options['captcha_show_wp_lost_password']){
-                add_filter( 'lostpassword_form', array('WPCaptcha_Functions', 'captcha_fields'));
-                add_filter( 'resetpass_form', array('WPCaptcha_Functions', 'captcha_fields'));
+                add_action( 'lostpassword_form', array('WPCaptcha_Functions', 'captcha_fields_print'));
+                add_action( 'resetpass_form', array('WPCaptcha_Functions', 'captcha_fields_print'));
                 add_action( 'woocommerce_lostpassword_form', array('WPCaptcha_Functions', 'captcha_fields_print'));
                 add_action( 'woocommerce_resetpassword_form', array('WPCaptcha_Functions', 'captcha_fields_print'));
                 add_action( 'woocommerce_lostpassword_form', array('WPCaptcha_Functions', 'login_scripts_print'));
@@ -143,8 +143,8 @@ class WPCaptcha
 
             // Handle comment form captcha
             if($options['captcha_show_wp_comment']){
-                add_filter( 'comment_form_after_fields', array('WPCaptcha_Functions', 'captcha_fields'));
-                add_filter( 'comment_form_after_fields', array('WPCaptcha_Functions', 'login_scripts_print'));
+                add_action( 'comment_form_after_fields', array('WPCaptcha_Functions', 'captcha_fields_print'));
+                add_action( 'comment_form_after_fields', array('WPCaptcha_Functions', 'login_scripts_print'));
                 add_filter( 'preprocess_comment', array('WPCaptcha_Functions', 'process_comment_form'), 10, 1 );
             }
 
