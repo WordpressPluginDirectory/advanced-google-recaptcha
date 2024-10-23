@@ -187,7 +187,7 @@ class WPCaptcha_Tab_Login_Form extends WPCaptcha
         echo '<div class="open-upsell open-upsell-block" data-feature="log_passwords">';
         WPCaptcha_Utility::create_toggle_switch('log_passwords', array('saved_value' => 0, 'option_key' => ''));
         echo '</div>';
-        echo '<span>Enablign this option will log the passwords used in failed login attempts. This is not recommended on websites with multiple users as the passwords are logged as plain text and can be viewed by all users that have access to the WP Captcha logs or the database.</span>';
+        echo '<span>Enabling this option will log the passwords used in failed login attempts. This is not recommended on websites with multiple users as the passwords are logged as plain text and can be viewed by all users that have access to the WP Captcha logs or the database.</span>';
         echo '</td></tr>';
 
         echo '<tr valign="top">

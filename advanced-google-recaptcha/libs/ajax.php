@@ -123,7 +123,7 @@ class WPCaptcha_AJAX extends WPCaptcha
             if (is_wp_error($captcha_result)) {
                 wp_send_json_error($captcha_result->get_error_message());
             }
-            wp_send_json_success();
+            wp_send_json_success($captcha_result);
         } else {
             wp_send_json_error(__('Unknown tool.', 'advanced-google-recaptcha'));
         }
@@ -171,8 +171,8 @@ class WPCaptcha_AJAX extends WPCaptcha
                 $response = wp_remote_get('https://www.google.com/recaptcha/api/siteverify?secret=' . $secret_key . '&response=' . $response);
                 $response = json_decode($response['body']);
 
-                if ($response->success) {
-                    return true;
+                if ($response->success && $response->score >= 0.5) {
+                    return $response->score;
                 } else {
                     return new WP_Error('wpcaptcha_recaptchav2_failed', __("reCAPTCHA verification failed ", 'advanced-google-recaptcha') . (isset($response->{'error-codes'}) ? ': ' . implode(',', $response->{'error-codes'}) : ''));
                 }

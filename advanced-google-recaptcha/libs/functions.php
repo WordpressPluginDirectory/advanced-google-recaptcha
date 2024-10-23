@@ -312,8 +312,7 @@ class WPCaptcha_Functions extends WPCaptcha
                     return new WP_Error('wpcaptcha_recaptchav3_failed', __("<strong>ERROR</strong>: reCAPTCHA verification request failed<br /><br />", 'advanced-google-recaptcha') . $response->get_error_message());
                 }
                 $response = json_decode($response['body']);
-
-                if ($response->success) {
+                if ($response->success && $response->score >= 0.5) {
                     return true;
                 } else {
                     return new WP_Error('wpcaptcha_recaptchav3_failed', __("<strong>ERROR</strong>: reCAPTCHA verification failed.<br /><br />Please try again.", 'advanced-google-recaptcha'));
