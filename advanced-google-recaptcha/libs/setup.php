@@ -216,7 +216,7 @@ class WPCaptcha_Setup extends WPCaptcha
             'uninstall_delete'                        => 0,
             'block_message'                           => 'We\'re sorry, but your IP has been blocked due to too many recent failed login attempts.',
             'block_message_country'                   => 'We\'re sorry, but access from your location is not allowed.',
-            'global_unblock_key'                      => 'll' . md5(time() . wp_rand(1000, 9999)),
+            'global_unblock_key'                      => 'agr' . md5(wp_generate_password(24)),
             'whitelist'                               => array(),
             'firewall_block_bots'                     => 0,
             'firewall_directory_traversal'            => 0,

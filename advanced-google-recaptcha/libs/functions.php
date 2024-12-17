@@ -647,7 +647,7 @@ class WPCaptcha_Functions extends WPCaptcha
             } else {
                 $user = get_user_by('email', $wpcaptcha_recovery_email);
                 if (user_can($user, 'administrator')) {
-                    $unblock_key = md5(time() . wp_rand(1000, 9999));
+                    $unblock_key = 'agr' . md5(wp_generate_password(24));
                     $unblock_attempts = get_transient('wpcaptcha_unlock_count_' . $user->ID);
                     if (!$unblock_attempts) {
                         $unblock_attempts = 0;

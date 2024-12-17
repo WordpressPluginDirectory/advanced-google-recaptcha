@@ -38,7 +38,7 @@ class WPCaptcha_AJAX extends WPCaptcha
         } else if ($tool == 'recovery_url') {
             if (isset($_POST['reset']) && $_POST['reset'] == 'true') {
                 sleep(1);
-                $options['global_unblock_key'] = 'll' . md5(time() . wp_rand(1000, 9999));
+                $options['global_unblock_key'] = 'agr' . md5(wp_generate_password(24));
                 update_option(WPCAPTCHA_OPTIONS_KEY, array_merge($options, $update));
             }
             wp_send_json_success(array('url' => '<a href="' . site_url('/?wpcaptcha_unblock=' . $options['global_unblock_key']) . '">' . site_url('/?wpcaptcha_unblock=' . $options['global_unblock_key']) . '</a>'));
