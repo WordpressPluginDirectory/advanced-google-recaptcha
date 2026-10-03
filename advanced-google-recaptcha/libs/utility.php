@@ -142,8 +142,9 @@ class WPCaptcha_Utility extends WPCaptcha
         $options = WPCaptcha_Setup::get_options();
         $ip = '';
 
+        
         if (!empty($_SERVER['REMOTE_ADDR'])) {
-            $ip = sanitize_url(wp_unslash($_SERVER['REMOTE_ADDR']));
+            $ip = sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR']));
         }
 
         if ($options['anonymous_logging'] == '1' && !$force_clear) {

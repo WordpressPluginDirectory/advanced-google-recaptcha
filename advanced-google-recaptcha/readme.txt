@@ -4,8 +4,8 @@ Contributors: WebFactory
 Tags: captcha, recaptcha, google recaptcha, comment recaptcha, login recaptcha
 Requires at least: 4.9
 Requires PHP: 5.6
-Tested up to: 7.0
-Stable tag: 5.40
+Tested up to: 7.1
+Stable tag: 5.41
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -75,6 +75,9 @@ You can report security bugs through the Patchstack Vulnerability Disclosure Pro
 9. Plugin settings
 
 == Changelog ==
+= 5.41 - 02/10/2026 =
+* Security fixes
+
 = 5.40 - 18/07/2026 =
 * Minor JS bug fix
 

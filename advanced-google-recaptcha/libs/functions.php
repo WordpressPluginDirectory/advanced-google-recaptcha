@@ -112,28 +112,36 @@ class WPCaptcha_Functions extends WPCaptcha
     static function incrementFails($username = "", $reason = "")
     {
         global $wpdb;
-        $options = WPCaptcha_Setup::get_options();
-        $ip = WPCaptcha_Utility::getUserIP();
 
-        $username = sanitize_user($username);
-        $user = get_user_by('login', $username);
+        $options = WPCaptcha_Setup::get_options();
+        $ip      = WPCaptcha_Utility::getUserIP();
+
+        $identifier = sanitize_text_field($username);
+        $user = get_user_by('login', $identifier);
+        if (false === $user && is_email($identifier)) {
+            $user = get_user_by('email', $identifier);
+        }
 
         if ($user || 1 == $options['lockout_invalid_usernames']) {
-            if ($user === false) {
-                $user_id = -1;
+
+            if (false === $user) {
+                $user_id     = -1;
+                $failed_user = sanitize_text_field($identifier);
             } else {
-                $user_id = $user->ID;
+                $user_id     = $user->ID;
+
+                // Normalize existing users to their actual login name.
+                $failed_user = $user->user_login;
             }
 
-            // phpcs:ignore db call warning as we are using a custom table
-            $wpdb->insert( // phpcs:ignore
+            $wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
                 $wpdb->wpcatcha_login_fails,
                 array(
-                    'user_id' => $user_id,
+                    'user_id'            => $user_id,
                     'login_attempt_date' => current_time('mysql'),
-                    'login_attempt_IP' => $ip,
-                    'failed_user' => $username,
-                    'reason' => $reason
+                    'login_attempt_IP'   => $ip,
+                    'failed_user'        => $failed_user,
+                    'reason'             => $reason,
                 )
             );
         }
@@ -145,8 +153,12 @@ class WPCaptcha_Functions extends WPCaptcha
         $options = WPCaptcha_Setup::get_options();
         $ip = WPCaptcha_Utility::getUserIP();
 
-        $username = sanitize_user($username);
-        $user = get_user_by('login', $username);
+        $identifier = sanitize_text_field($username);
+        $user = get_user_by('login', $identifier);
+        if (false === $user && is_email($identifier)) {
+            $user = get_user_by('email', $identifier);
+        }
+
         if ($user || 1 == $options['lockout_invalid_usernames']) {
             if ($user === false) {
                 $user_id = -1;
@@ -181,28 +193,38 @@ class WPCaptcha_Functions extends WPCaptcha
 
     static function is_rest_request()
     {
-        // no need for nonce check here
-        if (defined('REST_REQUEST') && REST_REQUEST || isset($_GET['rest_route']) && strpos(sanitize_text_field(wp_unslash($_GET['rest_route'])), '/', 0) === 0) { // phpcs:ignore
-            return true;
+        if (function_exists('wp_is_serving_rest_request')) {
+            return wp_is_serving_rest_request();
         }
 
-        global $wp_rewrite;
-        if (null === $wp_rewrite) {
-            $wp_rewrite = new WP_Rewrite();
-        }
-
-        $rest_url    = wp_parse_url(trailingslashit(rest_url()));
-        $current_url = wp_parse_url(add_query_arg(array()));
-        $is_rest = false;
-        if (isset($current_url['path'])) {
-            $is_rest = strpos($current_url['path'], $rest_url['path'], 0) === 0;
-        }
-
-        return $is_rest;
+        // Compatibility with WordPress < 6.5.
+        return defined('REST_REQUEST') && REST_REQUEST;
     }
 
-    static function wp_authenticate_username_password($user, $username, $password)
+    static function wp_authenticate_lock($user, $username, $password)
     {
+        if (is_a($user, 'WP_User')) {
+            return $user;
+        }
+
+        $options = WPCaptcha_Setup::get_options();
+
+        if (self::isLockedDown()) {
+            self::accesslock_screen($options['block_message']);
+            return new WP_Error('lockdown_fail_count', __("<strong>ERROR</strong>: We're sorry, but this IP has been blocked due to too many recent failed login attempts.<br /><br />Please try again later.", 'login-lockdown'));
+        }
+    }
+
+    static function wp_authenticate_user($user, $password)
+    {
+        if (is_wp_error($user)) {
+            return $user;
+        }
+
+        if (!is_a($user, 'WP_User')) {
+            return $user;
+        }
+
         $options = WPCaptcha_Setup::get_options();
 
         if ($options['login_protection'] && self::isLockedDown()) {
@@ -210,12 +232,9 @@ class WPCaptcha_Functions extends WPCaptcha
             return new WP_Error('wpcaptcha_fail_count', __("<strong>ERROR</strong>: We're sorry, but this IP has been blocked due to too many recent failed login attempts.<br /><br />Please try again later.", 'advanced-google-recaptcha'));
         }
 
-        if (is_wp_error($user)) {
-            return $user;
-        }
 
-        if (!$username) {
-            return $user;
+        if (0 !== intval($user->user_status)) {
+            return new WP_Error('incorrect_password', __('<strong>ERROR</strong>: Inactive account', 'advanced-google-recaptcha'));
         }
 
         if (self::is_rest_request()) {
@@ -224,66 +243,15 @@ class WPCaptcha_Functions extends WPCaptcha
 
         if ($options['captcha_show_login']) {
             $captcha = self::handle_captcha();
+
             if (is_wp_error($captcha)) {
-                if ($options['max_login_retries'] <= self::countFails($username) && self::countFails($username) > 0) {
-                    self::lockDown($username, 'Too many captcha fails');
-                }
                 return $captcha;
             }
         }
 
-        $userdata = get_user_by('login', $username);
-        if (false === $userdata) {
-            $userdata = get_user_by('email', $username);
-        }
-
-        if ($options['login_protection'] && $options['max_login_retries'] <= self::countFails($username)) {
-            if ($options['max_login_retries'] <= self::countFails($username) && self::countFails($username) > 0) {
-                self::lockDown($username, 'Too many fails');
-            }
-
-            if (strlen($username) > 0 && $userdata === false && $options['instant_block_nonusers'] == '1' && self::countFails($username) > 0) {
-                self::lockDown($username, 'Invalid Username');
-            }
-
-            return new WP_Error('wpcaptcha_fail_count', __("<strong>ERROR</strong>: We're sorry, but this IP has been blocked due to too many recent failed login attempts.<br /><br />Please try again later.", 'advanced-google-recaptcha'));
-        }
-
-        if (empty($username) || empty($password)) {
-            $error = new WP_Error();
-
-            if (empty($username))
-                $error->add('empty_username', __('<strong>ERROR</strong>: The username field is empty.', 'advanced-google-recaptcha'));
-
-            if (empty($password))
-                $error->add('empty_password', __('<strong>ERROR</strong>: The password field is empty.', 'advanced-google-recaptcha'));
-
-            return $error;
-        }
-
-        if ($userdata === false) {
-            /* translators: %s is replaced with the lost password URL */
-            return new WP_Error('invalid_username', sprintf(__('<strong>ERROR</strong>: Invalid username. <a href="%s" title="Password Lost and Found">Lost your password</a>?', 'advanced-google-recaptcha'), site_url('wp-login.php?action=lostpassword', 'login')));
-        }
-
-        $userdata = apply_filters('wp_authenticate_user', $userdata, $password);
-
-        if (is_wp_error($userdata)) {
-            return $userdata;
-        }
-
-        if (0 !== intval($userdata->user_status)) {
-            return new WP_Error('incorrect_password', __('<strong>ERROR</strong>: Inactive account', 'advanced-google-recaptcha'));
-        }
-
-        if (!is_string($password) || !is_string($userdata->user_pass) || is_null($userdata->ID) || !wp_check_password($password, $userdata->user_pass, $userdata->ID)) {
-            /* translators: %s is replaced with the lost password URL */
-            return new WP_Error('incorrect_password', sprintf(__('<strong>ERROR</strong>: Incorrect password. <a href="%s" title="Password Lost and Found">Lost your password</a>?', 'advanced-google-recaptcha'), site_url('wp-login.php?action=lostpassword', 'login')));
-        }
-
-        $user =  new WP_User($userdata->ID);
         return $user;
     }
+
 
     static function handle_captcha()
     {
@@ -338,6 +306,7 @@ class WPCaptcha_Functions extends WPCaptcha
             }
         }
 
+        //If no captcha method is enabled we return true otherwise all requests would just get blocked
         return true;
     }
 
@@ -354,7 +323,7 @@ class WPCaptcha_Functions extends WPCaptcha
     static function process_lost_password_form($errors)
     {
         //phpcs:no nonce is set in the WordPress reset pass form
-        if( !isset( $_POST['pass1'] ) &&  !isset( $_POST['user_login'] ) ){ //phpcs:ignore
+        if (!isset($_POST['pass1']) &&  !isset($_POST['user_login'])) { //phpcs:ignore
             return $errors;
         }
 
@@ -396,11 +365,11 @@ class WPCaptcha_Functions extends WPCaptcha
     static function check_woo_order_pay()
     {
         $captcha_check = self::handle_captcha();
-        if ( $captcha_check === true ) {
+        if ($captcha_check === true) {
             return;
         }
 
-        if ( function_exists('wc_add_notice') ) {
+        if (function_exists('wc_add_notice')) {
             wc_add_notice($captcha_check->get_error_message(), 'error');
         }
     }
@@ -452,7 +421,34 @@ class WPCaptcha_Functions extends WPCaptcha
 
     static function loginFailed($username, $error)
     {
+        $options = WPCaptcha_Setup::get_options();
+
+
         self::incrementFails($username, $error->get_error_code());
+
+        $fail_count = self::countFails($username);
+
+
+        if (!$options['login_protection']) {
+            return;
+        }
+
+        if ($options['instant_block_nonusers'] == '1' && strlen($username) > 0 && $fail_count > 0) {
+            $userdata = get_user_by('login', $username);
+            if (false === $userdata) {
+                $userdata = get_user_by('email', $username);
+            }
+
+            if (false === $userdata) {
+                self::lockDown($username, 'Invalid Username');
+
+                return;
+            }
+        }
+
+        if ($fail_count > 0 && $fail_count >= $options['max_login_retries']) {
+            self::lockDown($username, 'Too many fails');
+        }
     }
 
     static function login_error_message($error)
@@ -492,7 +488,7 @@ class WPCaptcha_Functions extends WPCaptcha
     {
         $options = WPCaptcha_Setup::get_options();
 
-        if(false === $output){
+        if (false === $output) {
             $output = '';
         }
         if ($options['captcha'] == 'recaptchav2') {
@@ -594,7 +590,7 @@ class WPCaptcha_Functions extends WPCaptcha
                 </script>';
             }
         } else if ($options['captcha'] == 'builtin') {
-            $output .= '<p><label for="wpcaptcha_captcha">' . !empty($options['captcha_challenge_text'])?$options['captcha_challenge_text']:'Are you human? Please solve: ';
+            $output .= '<p><label for="wpcaptcha_captcha">' . !empty($options['captcha_challenge_text']) ? $options['captcha_challenge_text'] : 'Are you human? Please solve: ';
             $captcha_id = wp_rand(1000, 9999);
             $captcha = self::math_captcha_generate($captcha_id);
             $output .= '<img class="wpcaptcha-captcha-img" style="vertical-align: text-top;" src="' . $captcha['img'] . '" alt="Captcha" />';
@@ -625,7 +621,7 @@ class WPCaptcha_Functions extends WPCaptcha
     {
         $options = WPCaptcha_Setup::get_options();
 
-        if(false === $output){
+        if (false === $output) {
             $output = '';
         }
         // scripts might need to be printed in odd contexts so wp_enqueue_script is not always ideal
@@ -1380,10 +1376,10 @@ class WPCaptcha_Functions extends WPCaptcha
 
         $a = wp_rand(0, (int) 10);
         $b = wp_rand(0, (int) 10);
-        if(isset($_GET['color'])){ // phpcs:ignore
-            $color = substr($_GET['color'],0,7); // phpcs:ignore
+        if (isset($_GET['color'])) { // phpcs:ignore
+            $color = substr($_GET['color'], 0, 7); // phpcs:ignore
             $color = urldecode($color);
-        } else{
+        } else {
             $color = '#FFFFFF';
         }
 
